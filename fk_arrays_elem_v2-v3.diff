@@ -1,0 +1,352 @@
+432c432
+< index b2457a6924..654f3ae3a4 100644
+---
+> index b2457a6924..052f2a2154 100644
+468c468
+< +	bool		has_array;
+---
+> +	bool		has_each_element;
+489c489
+< +	has_array = false;
+---
+> +	has_each_element = false;
+502c502
+< +				if (has_array)
+---
+> +				if (has_each_element)
+507c507
+< +				has_array = true;
+---
+> +				has_each_element = true;
+521c521
+< +	if (has_array)
+---
+> +	if (has_each_element)
+998c998
+< index 6e3a41062f..9e19df8403 100644
+---
+> index 6e3a41062f..15b9725c34 100644
+1005c1005
+< +	bool		has_array;		/* true if any reftype is EACH_ELEMENT */
+---
+> +	bool		has_each_element;		/* true if any reftype is EACH_ELEMENT */
+1023,1057c1023,1043
+< @@ -342,6 +345,7 @@ RI_FKey_check(TriggerData *trigdata)
+<  	if ((qplan = ri_FetchPreparedPlan(&qkey)) == NULL)
+<  	{
+<  		StringInfoData querybuf;
+< +		StringInfoData countbuf;
+<  		char		pkrelname[MAX_QUOTED_REL_NAME_LEN];
+<  		char		attname[MAX_QUOTED_NAME_LEN];
+<  		char		paramname[16];
+< @@ -355,6 +359,14 @@ RI_FKey_check(TriggerData *trigdata)
+<  		 *		   FOR KEY SHARE OF x
+<  		 * The type id's for the $ parameters are those of the
+<  		 * corresponding FK attributes.
+< +		 *
+< +		 * In case of an array ELEMENT foreign key, the previous query is used
+< +		 * to count the number of matching rows and see if every combination
+< +		 * is actually referenced.
+< +		 * The wrapping query is
+< +		 *	SELECT 1 WHERE
+< +		 *	  (SELECT count(DISTINCT y) FROM unnest($1) y)
+< +		 *	  = (SELECT count(*) FROM (<QUERY>) z)
+<  		 * ----------
+<  		 */
+<  		initStringInfo(&querybuf);
+< @@ -364,6 +376,13 @@ RI_FKey_check(TriggerData *trigdata)
+<  		appendStringInfo(&querybuf, "SELECT 1 FROM %s%s x",
+<  						 pk_only, pkrelname);
+<  		querysep = "WHERE";
+< +
+< +		if (riinfo->has_array)
+< +		{
+< +			initStringInfo(&countbuf);
+< +			appendStringInfo(&countbuf, "SELECT 1 WHERE ");
+< +		}
+< +
+<  		for (int i = 0; i < riinfo->nkeys; i++)
+---
+> @@ -349,41 +352,106 @@ RI_FKey_check(TriggerData *trigdata)
+>  		Oid			queryoids[RI_MAX_NUMKEYS];
+>  		const char *pk_only;
+>  
+> -		/* ----------
+> -		 * The query string built is
+> -		 *	SELECT 1 FROM [ONLY] <pktable> x WHERE pkatt1 = $1 [AND ...]
+> -		 *		   FOR KEY SHARE OF x
+> -		 * The type id's for the $ parameters are those of the
+> -		 * corresponding FK attributes.
+> -		 * ----------
+> -		 */
+> -		initStringInfo(&querybuf);
+> -		pk_only = pk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+> -			"" : "ONLY ";
+> -		quoteRelationName(pkrelname, pk_rel);
+> -		appendStringInfo(&querybuf, "SELECT 1 FROM %s%s x",
+> -						 pk_only, pkrelname);
+> -		querysep = "WHERE";
+> -		for (int i = 0; i < riinfo->nkeys; i++)
+> +		if (riinfo->has_each_element)
+1059,1077c1045,1072
+<  			Oid			pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
+< @@ -372,18 +391,44 @@ RI_FKey_check(TriggerData *trigdata)
+<  			quoteOneName(attname,
+<  						 RIAttName(pk_rel, riinfo->pk_attnums[i]));
+<  			sprintf(paramname, "$%d", i + 1);
+< +
+< +			/*
+< +			 * In case of an array ELEMENT foreign key, we check that each
+< +			 * distinct non-null value in the array is present in the PK
+< +			 * table.
+< +			 */
+< +			if (riinfo->fk_reftypes[i] == FKCONSTR_REF_EACH_ELEMENT)
+< +				appendStringInfo(&countbuf,
+< +								 "(SELECT pg_catalog.count(DISTINCT y) FROM pg_catalog.unnest(%s) y)",
+< +								 paramname);
+< +
+<  			ri_GenerateQual(&querybuf, querysep,
+<  							attname, pk_type,
+<  							riinfo->pf_eq_oprs[i],
+---
+> -			Oid			pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
+> -			Oid			fk_type = RIAttType(fk_rel, riinfo->fk_attnums[i]);
+> +      /* ----------
+> +      * The query string built is
+> +      * 
+> +      * SELECT 1 WHERE NOT EXISTS
+> +      * (
+> +      *   SELECT 1 FROM pg_catalog.unnest([$the FKCONSTR_REF_EACH_ELEMENT parameter]) WHERE unnest IS NOT NULL AND NOT EXISTS
+> +      *   (
+> +      *     SELECT 1 FROM [ONLY] pktable x WHERE pkatt1 = [$1 | unnest] [AND ...]
+> +      *     FOR KEY SHARE OF x
+> +      *   )
+> +      * )
+> +      * 
+> +      * The type id's for the $ parameters are those of the
+> +      * corresponding FK attributes.
+> +      */
+> +      initStringInfo(&querybuf);
+> +      pk_only = pk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+> +        "" : "ONLY ";
+> +      quoteRelationName(pkrelname, pk_rel);
+>  
+> -			quoteOneName(attname,
+> -						 RIAttName(pk_rel, riinfo->pk_attnums[i]));
+> -			sprintf(paramname, "$%d", i + 1);
+> -			ri_GenerateQual(&querybuf, querysep,
+> -							attname, pk_type,
+> -							riinfo->pf_eq_oprs[i],
+1079,1084c1074,1154
+< +							paramname, fk_type,
+< +							riinfo->fk_reftypes[i]);
+<  			querysep = "AND";
+<  			queryoids[i] = fk_type;
+<  		}
+<  		appendStringInfoString(&querybuf, " FOR KEY SHARE OF x");
+---
+> -			querysep = "AND";
+> -			queryoids[i] = fk_type;
+> -		}
+> -		appendStringInfoString(&querybuf, " FOR KEY SHARE OF x");
+> +      for (int i = 0; i < riinfo->nkeys; i++)
+> +      {
+> +        if (riinfo->fk_reftypes[i] != FKCONSTR_REF_EACH_ELEMENT)
+> +          continue;
+> +        sprintf(paramname, "$%d", i + 1);
+> +        appendStringInfo(&querybuf, "SELECT 1 WHERE NOT EXISTS ("
+> +          "SELECT 1 FROM pg_catalog.unnest(%s) WHERE unnest IS NOT NULL"
+> +          " AND NOT EXISTS (SELECT 1 FROM %s%s x",
+> +                paramname, pk_only, pkrelname);
+> +      }
+> +      querysep = "WHERE";
+> +      for (int i = 0; i < riinfo->nkeys; i++)
+> +      {
+> +        Oid			pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
+> +        Oid			fk_type = RIAttType(fk_rel, riinfo->fk_attnums[i]);
+> +
+> +        quoteOneName(attname,
+> +              RIAttName(pk_rel, riinfo->pk_attnums[i]));
+> +        if (riinfo->fk_reftypes[i] == FKCONSTR_REF_EACH_ELEMENT)
+> +        {
+> +          sprintf(paramname, "unnest");
+> +        }
+> +        else
+> +        {
+> +          sprintf(paramname, "$%d", i + 1);
+> +        }
+> +        ri_GenerateQual(&querybuf, querysep,
+> +                attname, pk_type,
+> +                riinfo->pf_eq_oprs[i],
+> +                paramname, fk_type, FKCONSTR_REF_PLAIN);
+> +        querysep = "AND";
+> +        queryoids[i] = fk_type;
+> +      }
+> +      appendStringInfoString(&querybuf, " FOR KEY SHARE OF x))");
+> +
+> +      /* Prepare and save the plan */
+> +      qplan = ri_PlanCheck(querybuf.data, riinfo->nkeys, queryoids,
+> +                &qkey, fk_rel, pk_rel);
+> +    }
+> +    else
+> +    {
+> +      /* ----------
+> +      * The query string built is
+> +      *	SELECT 1 FROM [ONLY] <pktable> x WHERE pkatt1 = $1 [AND ...]
+> +      *		   FOR KEY SHARE OF x
+> +      * The type id's for the $ parameters are those of the
+> +      * corresponding FK attributes.
+> +      * ----------
+> +      */
+> +      initStringInfo(&querybuf);
+> +      pk_only = pk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+> +        "" : "ONLY ";
+> +      quoteRelationName(pkrelname, pk_rel);
+> +      appendStringInfo(&querybuf, "SELECT 1 FROM %s%s x",
+> +              pk_only, pkrelname);
+> +      querysep = "WHERE";
+> +      for (int i = 0; i < riinfo->nkeys; i++)
+> +      {
+> +        Oid			pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
+> +        Oid			fk_type = RIAttType(fk_rel, riinfo->fk_attnums[i]);
+> +
+> +        quoteOneName(attname,
+> +              RIAttName(pk_rel, riinfo->pk_attnums[i]));
+> +        sprintf(paramname, "$%d", i + 1);
+> +        ri_GenerateQual(&querybuf, querysep,
+> +                attname, pk_type,
+> +                riinfo->pf_eq_oprs[i],
+> +                paramname, fk_type, FKCONSTR_REF_PLAIN);
+> +        querysep = "AND";
+> +        queryoids[i] = fk_type;
+> +      }
+> +      appendStringInfoString(&querybuf, " FOR KEY SHARE OF x");
+> +
+> +      /* Prepare and save the plan */
+> +      qplan = ri_PlanCheck(querybuf.data, riinfo->nkeys, queryoids,
+> +                &qkey, fk_rel, pk_rel);
+> +    }
+1089,1105d1158
+< +		if (riinfo->has_array)
+< +		{
+< +			appendStringInfo(&countbuf,
+< +							 " OPERATOR(pg_catalog.=) (SELECT pg_catalog.count(*) FROM (%s) z)",
+< +							 querybuf.data);
+< +
+< +			/* Prepare and save the plan for Array Element Foreign Keys */
+< +			qplan = ri_PlanCheck(countbuf.data, riinfo->nkeys, queryoids,
+< +								 &qkey, fk_rel, pk_rel);
+< +		}
+< +		else
+< +		{
+< +			/* Prepare and save the plan */
+< +			qplan = ri_PlanCheck(querybuf.data, riinfo->nkeys, queryoids,
+< +								&qkey, fk_rel, pk_rel);
+< +
+< +		}
+1109c1162
+< @@ -502,7 +547,8 @@ ri_Check_Pk_Match(Relation pk_rel, Relation fk_rel,
+---
+> @@ -502,7 +570,8 @@ ri_Check_Pk_Match(Relation pk_rel, Relation fk_rel,
+1119c1172
+< @@ -692,7 +738,8 @@ ri_restrict(TriggerData *trigdata, bool is_no_action)
+---
+> @@ -692,7 +761,8 @@ ri_restrict(TriggerData *trigdata, bool is_no_action)
+1129c1182
+< @@ -798,7 +845,8 @@ RI_FKey_cascade_del(PG_FUNCTION_ARGS)
+---
+> @@ -798,7 +868,8 @@ RI_FKey_cascade_del(PG_FUNCTION_ARGS)
+1139c1192
+< @@ -917,7 +965,8 @@ RI_FKey_cascade_upd(PG_FUNCTION_ARGS)
+---
+> @@ -917,7 +988,8 @@ RI_FKey_cascade_upd(PG_FUNCTION_ARGS)
+1149c1202
+< @@ -1097,7 +1146,8 @@ ri_set(TriggerData *trigdata, bool is_set_null)
+---
+> @@ -1097,7 +1169,8 @@ ri_set(TriggerData *trigdata, bool is_set_null)
+1159c1212
+< @@ -1370,6 +1420,14 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+---
+> @@ -1370,6 +1443,14 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+1174c1227
+< @@ -1387,13 +1445,35 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+---
+> @@ -1387,13 +1468,36 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+1186c1239,1244
+< +	if (riinfo->has_array)
+---
+> +  fk_only = fk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+> +    "" : "ONLY ";
+> +  pk_only = pk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+> +    "" : "ONLY ";
+> +
+> +	if (riinfo->has_each_element)
+1188c1246
+< +		appendStringInfo(&querybuf, " FROM ONLY %s fk", fkrelname);
+---
+> +		appendStringInfo(&querybuf, " FROM %s%s fk", fk_only, fkrelname);
+1197c1255
+< +							 " CROSS JOIN LATERAL pg_catalog.unnest(fk.%s) a (e)",
+---
+> +							 " CROSS JOIN LATERAL pg_catalog.unnest(fk.%s)",
+1201,1202c1259,1260
+< +						 " LEFT OUTER JOIN ONLY %s pk ON",
+< +						 pkrelname);
+---
+> +						 " LEFT OUTER JOIN %s%s pk ON",
+> +						 pk_only, pkrelname);
+1206,1209d1263
+< +		fk_only = fk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+< +			"" : "ONLY ";
+< +		pk_only = pk_rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ?
+< +			"" : "ONLY ";
+1217c1271
+< @@ -1404,15 +1484,23 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+---
+> @@ -1404,15 +1508,23 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+1228c1282
+< +			tmp = "a.e";
+---
+> +			tmp = "unnest";
+1244c1298
+< @@ -1428,10 +1516,15 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+---
+> @@ -1428,10 +1540,15 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+1253c1307
+< +			appendStringInfo(&querybuf, "%sa.e IS NOT NULL", sep);
+---
+> +			appendStringInfo(&querybuf, "%sunnest IS NOT NULL", sep);
+1264c1318
+< @@ -1647,7 +1740,8 @@ RI_PartitionRemove_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+---
+> @@ -1647,7 +1764,8 @@ RI_PartitionRemove_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
+1274c1328
+< @@ -1832,11 +1926,12 @@ ri_GenerateQual(StringInfo buf,
+---
+> @@ -1832,11 +1950,12 @@ ri_GenerateQual(StringInfo buf,
+1289c1343
+< @@ -2066,7 +2161,26 @@ ri_LoadConstraintInfo(Oid constraintOid)
+---
+> @@ -2066,7 +2185,26 @@ ri_LoadConstraintInfo(Oid constraintOid)
+1298c1352
+< +	 * Fix up some stuff for Array Element Foreign Keys.  We need a has_array
+---
+> +	 * Fix up some stuff for Array Element Foreign Keys.  We need a has_each_element
+1305c1359
+< +	riinfo->has_array = false;
+---
+> +	riinfo->has_each_element = false;
+1310c1364
+< +			riinfo->has_array = true;
+---
+> +			riinfo->has_each_element = true;
+1465c1519,1520
+< +
+---
+>  
+> -	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opoid));
+1471,1472c1526
+<  
+< -	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opoid));
+---
+> +
