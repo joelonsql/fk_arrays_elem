@@ -87,114 +87,14 @@ FOREIGN KEY (b_id, EACH ELEMENT OF c_id) REFERENCES b_c(b_id, c_id)
 
 SELECT * FROM unoid.pg_constraint;
 
--[ RECORD 1 ]-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-oid           | [["a", "public"], null, "a_pkey"]
-conname       | a_pkey
-connamespace  | public
-contype       | p
-condeferrable | f
-condeferred   | f
-convalidated  | t
-conrelid      | ["a", "public"]
-contypid      |
-conindid      | ["a_pkey", "public"]
-conparentid   |
-confrelid     |
-confupdtype   |
-confdeltype   |
-confmatchtype |
-conislocal    | t
-coninhcount   | 0
-connoinherit  | t
-conkey        | {a_id}
-confkey       |
-confreftype   |
-conpfeqop     |
-conppeqop     |
-conffeqop     |
-conexclop     |
-conbin        |
--[ RECORD 2 ]-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-oid           | [["b_c", "public"], null, "b_c_pkey"]
-conname       | b_c_pkey
-connamespace  | public
-contype       | p
-condeferrable | f
-condeferred   | f
-convalidated  | t
-conrelid      | ["b_c", "public"]
-contypid      |
-conindid      | ["b_c_pkey", "public"]
-conparentid   |
-confrelid     |
-confupdtype   |
-confdeltype   |
-confmatchtype |
-conislocal    | t
-coninhcount   | 0
-connoinherit  | t
-conkey        | {b_id,c_id}
-confkey       |
-confreftype   |
-conpfeqop     |
-conppeqop     |
-conffeqop     |
-conexclop     |
-conbin        |
--[ RECORD 3 ]-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-oid           | [["a_b_c", "public"], null, "a_b_c_a_id_fkey"]
-conname       | a_b_c_a_id_fkey
-connamespace  | public
-contype       | f
-condeferrable | f
-condeferred   | f
-convalidated  | t
-conrelid      | ["a_b_c", "public"]
-contypid      |
-conindid      | ["a_pkey", "public"]
-conparentid   |
-confrelid     | ["a", "public"]
-confupdtype   | a
-confdeltype   | a
-confmatchtype | s
-conislocal    | t
-coninhcount   | 0
-connoinherit  | t
-conkey        | {a_id}
-confkey       | {a_id}
-confreftype   | {p}
-conpfeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conppeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conffeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conexclop     |
-conbin        |
--[ RECORD 4 ]-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-oid           | [["a_b_c", "public"], null, "a_b_c_b_id_c_id_fkey"]
-conname       | a_b_c_b_id_c_id_fkey
-connamespace  | public
-contype       | f
-condeferrable | f
-condeferred   | f
-convalidated  | t
-conrelid      | ["a_b_c", "public"]
-contypid      |
-conindid      | ["b_c_pkey", "public"]
-conparentid   |
-confrelid     | ["b_c", "public"]
-confupdtype   | a
-confdeltype   | a
-confmatchtype | s
-conislocal    | t
-coninhcount   | 0
-connoinherit  | t
-conkey        | {b_id,c_id}
-confkey       | {b_id,c_id}
-confreftype   | {p,e}
-conpfeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conppeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conffeqop     | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}
-conexclop     |
-conbin        |
+                         oid                         |       conname        | connamespace | contype | condeferrable | condeferred | convalidated |      conrelid       | contypid |        conindid        | conparentid |     confrelid     | confupdtype | confdeltype | confmatchtype | conislocal | coninhcount | connoinherit |   conkey    |   confkey   | confreftype |                                                                               conpfeqop                                                                               |                                                                               conppeqop                                                                               |                                                                               conffeqop                                                                               | conexclop | conbin
+-----------------------------------------------------+----------------------+--------------+---------+---------------+-------------+--------------+---------------------+----------+------------------------+-------------+-------------------+-------------+-------------+---------------+------------+-------------+--------------+-------------+-------------+-------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------+--------
+ [["a", "public"], null, "a_pkey"]                   | a_pkey               | public       | p       | f             | f           | t            | ["a", "public"]     |          | ["a_pkey", "public"]   |             |                   |             |             |               | t          |           0 | t            | {a_id}      |             |             |                                                                                                                                                                       |                                                                                                                                                                       |                                                                                                                                                                       |           |
+ [["b_c", "public"], null, "b_c_pkey"]               | b_c_pkey             | public       | p       | f             | f           | t            | ["b_c", "public"]   |          | ["b_c_pkey", "public"] |             |                   |             |             |               | t          |           0 | t            | {b_id,c_id} |             |             |                                                                                                                                                                       |                                                                                                                                                                       |                                                                                                                                                                       |           |
+ [["a_b_c", "public"], null, "a_b_c_a_id_fkey"]      | a_b_c_a_id_fkey      | public       | f       | f             | f           | t            | ["a_b_c", "public"] |          | ["a_pkey", "public"]   |             | ["a", "public"]   | a           | a           | s             | t          |           0 | t            | {a_id}      | {a_id}      | {p}         | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}                                                                                   | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}                                                                                   | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"}                                                                                   |           |
+ [["a_b_c", "public"], null, "a_b_c_b_id_c_id_fkey"] | a_b_c_b_id_c_id_fkey | public       | f       | f             | f           | t            | ["a_b_c", "public"] |          | ["b_c_pkey", "public"] |             | ["b_c", "public"] | a           | a           | s             | t          |           0 | t            | {b_id,c_id} | {b_id,c_id} | {p,e}       | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"} | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"} | {"[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]","[\"=\", [\"int8\", \"pg_catalog\"], [\"int8\", \"pg_catalog\"], \"pg_catalog\"]"} |           |
+(4 rows)
+
 ```
 
 <h2 id="review">4. Review</h2>
