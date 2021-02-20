@@ -960,7 +960,7 @@ index dd72a9fc3c..6fe3e5b329 100644
  			| ELSE
  			| ENABLE_P
  			| ENCODING
-@@ -16876,6 +16921,27 @@ SplitColQualList(List *qualList,
+@@ -16876,6 +16921,24 @@ SplitColQualList(List *qualList,
  	*constraintList = qualList;
  }
  
@@ -972,9 +972,6 @@ index dd72a9fc3c..6fe3e5b329 100644
 +
 +	*names = NIL;
 +	*reftypes = NIL;
-+
-+	Assert(**reftypes != NULL);
-+	Assert(**names != NULL);
 +
 +	foreach(lc, fkcolelems)
 +	{
