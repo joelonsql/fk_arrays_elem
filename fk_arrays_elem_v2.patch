@@ -33,7 +33,7 @@ index db29905e91..6c81596ed0 100644
     In the case of an exclusion constraint, <structfield>conkey</structfield>
     is only useful for constraint elements that are simple column references.
 diff --git a/doc/src/sgml/ddl.sgml b/doc/src/sgml/ddl.sgml
-index 1e9a4625cc..3f2b69b4f3 100644
+index 1e9a4625cc..1e550f6806 100644
 --- a/doc/src/sgml/ddl.sgml
 +++ b/doc/src/sgml/ddl.sgml
 @@ -1079,6 +1079,116 @@ CREATE TABLE order_items (
@@ -154,7 +154,7 @@ index 1e9a4625cc..3f2b69b4f3 100644
     <title>Exclusion Constraints</title>
  
 diff --git a/doc/src/sgml/ref/create_table.sgml b/doc/src/sgml/ref/create_table.sgml
-index 569f4c9da7..ed5b1b1863 100644
+index 3b2b227683..41d92ffc1e 100644
 --- a/doc/src/sgml/ref/create_table.sgml
 +++ b/doc/src/sgml/ref/create_table.sgml
 @@ -1031,10 +1031,10 @@ WITH ( MODULUS <replaceable class="parameter">numeric_literal</replaceable>, REM
@@ -318,7 +318,7 @@ index 9abc4a1f55..a9e2ab33b0 100644
  							  ' ',
  							  ' ',
 diff --git a/src/backend/catalog/index.c b/src/backend/catalog/index.c
-index 1514937748..48c6d3aaa8 100644
+index b4ab0b88ad..63d74ccac8 100644
 --- a/src/backend/catalog/index.c
 +++ b/src/backend/catalog/index.c
 @@ -2109,6 +2109,7 @@ index_constraint_create(Relation heapRelation,
@@ -433,7 +433,7 @@ index c5c25ce11d..856b2b6775 100644
  				foundUniqueIndex = true;
  			}
 diff --git a/src/backend/commands/tablecmds.c b/src/backend/commands/tablecmds.c
-index 420991e315..e2a8f2791c 100644
+index b2457a6924..654f3ae3a4 100644
 --- a/src/backend/commands/tablecmds.c
 +++ b/src/backend/commands/tablecmds.c
 @@ -447,12 +447,12 @@ static ObjectAddress ATAddForeignKeyConstraint(List **wqueue, AlteredTableInfo *
@@ -818,7 +818,7 @@ index f5dcedf6e8..0c582bb3f7 100644
  			WRITE_CHAR_FIELD(fk_upd_action);
  			WRITE_CHAR_FIELD(fk_del_action);
 diff --git a/src/backend/parser/gram.y b/src/backend/parser/gram.y
-index dd72a9fc3c..6655a617db 100644
+index dd72a9fc3c..6fe3e5b329 100644
 --- a/src/backend/parser/gram.y
 +++ b/src/backend/parser/gram.y
 @@ -134,6 +134,19 @@ typedef struct SelectLimit
@@ -989,7 +989,7 @@ index dd72a9fc3c..6655a617db 100644
   * Process result of ConstraintAttributeSpec, and set appropriate bool flags
   * in the output command node.  Pass NULL for any flags the particular
 diff --git a/src/backend/parser/parse_utilcmd.c b/src/backend/parser/parse_utilcmd.c
-index b31f3afa03..ccef8c8e0b 100644
+index 75266caeb4..7d752c1f53 100644
 --- a/src/backend/parser/parse_utilcmd.c
 +++ b/src/backend/parser/parse_utilcmd.c
 @@ -789,6 +789,8 @@ transformColumnDefinition(CreateStmtContext *cxt, ColumnDef *column)
