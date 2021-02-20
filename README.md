@@ -33,11 +33,13 @@
 <h2 id="about">1. About</h2>
 
 This is a review of Mark Rofail's patch [fk_arrays_elem_v2.patch] submitted to the [Commitfest-2021-03].
+The [anyarray_anyelement_operators-v4.patch] must be applied before this patch can be tested.
 
     $ sha512sum fk_arrays_elem_v2.patch
     7edec9bc3132b877247ed677e3f132d12f0759f3745120ad1627a7812608e517f806e22f1ba3464249f43d56e3956af8ed2afbbdaba5731457034d0eafddaaba
 
 [fk_arrays_elem_v2.patch]: https://www.postgresql.org/message-id/attachment/119359/fk_arrays_elem_v2.patch
+[anyarray_anyelement_operators-v4.patch]: https://www.postgresql.org/message-id/attachment/119360/anyarray_anyelement_operators-v4.patch
 [Commitfest-2021-03]: https://commitfest.postgresql.org/32/2966/
 
 <h2 id="installation">2. Installation</h2>
@@ -46,6 +48,7 @@ Patch and compile `PostgreSQL` with:
 
     $ git clone git://git.postgresql.org/git/postgresql.git
     $ cd postgresql
+    $ patch -p1 < ~/Downloads/anyarray_anyelement_operators-v4.patch
     $ patch -p1 < ~/Downloads/fk_arrays_elem_v2.patch
     $ ./configure --prefix=$HOME/pg-head
     $ make -j16
